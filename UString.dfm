@@ -1,0 +1,57 @@
+object FormStringWindow: TFormStringWindow
+  Left = 0
+  Top = 0
+  Margins.Left = 2
+  Margins.Top = 2
+  Margins.Right = 2
+  Margins.Bottom = 2
+  BorderIcons = [biSystemMenu]
+  Caption = 'StringText'
+  ClientHeight = 525
+  ClientWidth = 750
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -13
+  Font.Name = 'Default'
+  Font.Style = []
+  KeyPreview = True
+  Position = poMainFormCenter
+  Scaled = False
+  OnKeyDown = FormKeyDown
+  PixelsPerInch = 120
+  TextHeight = 17
+  object btContinueStringWindow: TButton
+    Left = 7
+    Top = 495
+    Width = 735
+    Height = 22
+    Cursor = crHandPoint
+    Caption = 'Enter'
+    ModalResult = 1
+    TabOrder = 0
+  end
+  object tmLargeString1: TMemo
+    Left = 7
+    Top = 8
+    Width = 735
+    Height = 310
+    HideSelection = False
+    ParentShowHint = False
+    ScrollBars = ssVertical
+    ShowHint = True
+    TabOrder = 1
+  end
+  object tmLargeString2: TMemo
+    Left = 8
+    Top = 324
+    Width = 734
+    Height = 165
+    HideSelection = False
+    ParentShowHint = False
+    ReadOnly = True
+    ScrollBars = ssVertical
+    ShowHint = True
+    TabOrder = 2
+  end
+end
