@@ -1,7 +1,7 @@
 <img width="962" height="572" alt="screenshot" src="https://github.com/user-attachments/assets/c18f6488-5570-4ec4-9695-d31fe9bb434d" />
 
  
-## TlkEditor
+## Talk Table Editor
 
 Компактный редактор TLK-файлов (V1 и V3.0) для игр на движках Infinity и Aurora. Поддерживает сравнение двух файлов, продвинутый поиск и замену строк по фильтрам (флаги, звук, регистр, язык), систему закладок и обработку текста шаблонами.
 
