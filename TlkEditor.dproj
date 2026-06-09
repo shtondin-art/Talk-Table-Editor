@@ -98,7 +98,6 @@
         <DCC_DebugInformation>0</DCC_DebugInformation>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
-        <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <DCC_DebugInformation>2</DCC_DebugInformation>
         <DCC_MapFile>3</DCC_MapFile>
         <DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
@@ -107,6 +106,7 @@
         <VerInfo_Locale>3131</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=Shtondin Mikhail Viktorovich;LegalTrademarks=;OriginalFilename=TlkEditor.exe;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=Talk Table Editor;ProductVersion=3.10.16.14;Comments=mvshtondin@yandex.ru</VerInfo_Keys>
         <AppDPIAwarenessMode>unaware</AppDPIAwarenessMode>
+        <DCC_UnitSearchPath>.\ExternalLibs;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
@@ -131,7 +131,6 @@
             <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="..\Modules.Pas\UConfigFile.pas"/>
-        <DCCReference Include="..\Modules.Pas\HashMap.pas"/>
         <DCCReference Include="..\Modules.Pas\UDataFunc.pas"/>
         <DCCReference Include="..\Modules.Pas\UFileFunc.pas"/>
         <BuildConfiguration Include="Base">
@@ -155,14 +154,19 @@
                     <Source Name="MainSource">TlkEditor.dpr</Source>
                 </Source>
                 <Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\dcloffice2k240.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\dclofficexp240.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\dcloffice2k290.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\dclofficexp290.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
                 </Excluded_Packages>
             </Delphi.Personality>
             <Deployment Version="4">
                 <DeployFile LocalName="Win32\Debug\TlkEditor.exe" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployFile LocalName="Win32\Release\TlkEditor.exe" Configuration="Release" Class="ProjectOutput"/>
-                <DeployFile LocalName="Win32\Release\TlkEditor.exe" Configuration="Release" Class="ProjectOutput"/>
+                <DeployFile LocalName="Win32\Release\TlkEditor.exe" Configuration="Release" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>TlkEditor.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployClass Name="AdditionalDebugSymbols">
                     <Platform Name="iOSSimulator">
                         <Operation>1</Operation>

@@ -8,8 +8,6 @@ uses
   UFileName in 'UFileName.pas' {FormFileName},
   U500Strings in 'U500Strings.pas' {Form500Strings},
   UConfigFile in '..\Modules.Pas\UConfigFile.pas',
-//  UFileInfo in '..\Modules.Pas\UFileInfo.pas',
-  HashMap in '..\Modules.Pas\HashMap.pas',
   UDataFunc in '..\Modules.Pas\UDataFunc.pas',
   UFileFunc in '..\Modules.Pas\UFileFunc.pas';
 

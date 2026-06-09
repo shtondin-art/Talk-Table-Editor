@@ -21,7 +21,7 @@ uses
 
   Winapi.Windows,
 
-  HashMap,
+//  HashMap,
 
   UDataFunc,
   UFileFunc,
@@ -278,8 +278,17 @@ var
   slBookmarks: TStringList;
   slBookmarksNum: TStringList;
 
-  hmTlk1ChangeIndex: THashMap;
-  hmTlk1ChangeValue: THashMap;
+//  hmTlk1ChangeIndex: THashMap;
+//  hmTlk1ChangeValue: THashMap;
+
+type
+  TStringHistory = record
+    Index  : Integer;           // Индекс последнего изменения
+    Values : array of string;  // Массив всех изменений для данной позиции
+  end;
+var
+  // Глобальный массив вместо старых HashMap-переменных
+  Tlk1Changes : array of TStringHistory;
 
 implementation
 
@@ -498,44 +507,77 @@ end;
 //  if inLastChange = 0 then
 //     Result := '<EMPTY>';
 //end;
-function getChangeOfString( const inPos: Integer ): string; inline;
+//function getChangeOfString( const inPos: Integer ): string; inline;
+//var
+//  inLast: Integer;
+//  pNode: Pointer;
+//
+//begin
+//  Result := '<EMPTY>';
+//
+//  if ( hmTlk1ChangeIndex = nil )
+//     or ( hmTlk1ChangeValue = nil ) then
+//     Exit;
+//
+//  // 1. Получаем указатель на узел один раз (самый быстрый поиск в THashMap)
+//  pNode := hmTlk1ChangeIndex[ inPos ];
+//  // Вместо медленного VarIsNull проверяем указатель
+//  if pNode = nil then
+//     Exit;
+//
+//  // 2. Извлекаем индекс последнего изменения из Value
+//  inLast := getIntegerInline( THashMap( pNode ).Value );
+//  if inLast <= 0 then
+//     Exit;
+//
+//  // 3. Цикл поиска валидной строки (двигаемся назад по истории изменений)
+//  Result := getStringInline( THashMap( hmTlk1ChangeValue[ inPos ][ inLast ] ).Value );
+//
+//  while ( inLast > 0 )
+//        and ( Result = '<EMPTY>' ) do begin
+//    if inBreak = 1 then
+//       Break;
+//
+//    Dec( inLast );
+//    Result := getStringInline( THashMap( hmTlk1ChangeValue[ inPos ][ inLast ] ).Value );
+//  end;
+//
+//  if ( inLast = 0 )
+//     and ( Result = '<EMPTY>' ) then
+//     Result := '<EMPTY>';
+//end;
+function getChangeOfString(const inPos: Integer): string; inline;
 var
   inLast: Integer;
-  pNode: Pointer;
-
 begin
   Result := '<EMPTY>';
 
-  if ( hmTlk1ChangeIndex = nil )
-     or ( hmTlk1ChangeValue = nil ) then
+  // 1. Проверяем инициализацию массива и попадание в его границы
+  if (Tlk1Changes = nil) or (inPos < 0) or (inPos >= Length(Tlk1Changes)) then
      Exit;
 
-  // 1. Получаем указатель на узел один раз (самый быстрый поиск в THashMap)
-  pNode := hmTlk1ChangeIndex[ inPos ];
-  // Вместо медленного VarIsNull проверяем указатель
-  if pNode = nil then
+  // 2. Извлекаем индекс последнего изменения
+  inLast := Tlk1Changes[inPos].Index;
+
+  // Проверяем валидность индекса изменений и наличие элементов в массиве значений
+  if (inLast <= 0) or (Tlk1Changes[inPos].Values = nil) then
      Exit;
 
-  // 2. Извлекаем индекс последнего изменения из Value
-  inLast := getIntegerInline( THashMap( pNode ).Value );
-  if inLast <= 0 then
-     Exit;
+  // Страховка от выхода за границы вложенного массива
+  if inLast >= Length(Tlk1Changes[inPos].Values) then
+     inLast := Length(Tlk1Changes[inPos].Values) - 1;
 
-  // 3. Цикл поиска валидной строки (двигаемся назад по истории изменений)
-  Result := getStringInline( THashMap( hmTlk1ChangeValue[ inPos ][ inLast ] ).Value );
+  // 3. Цикл поиска валидной строки (двигаемся назад по истории)
+  Result := Tlk1Changes[inPos].Values[inLast];
 
-  while ( inLast > 0 )
-        and ( Result = '<EMPTY>' ) do begin
+  while (inLast > 0) and (Result = '<EMPTY>') do
+  begin
     if inBreak = 1 then
        Break;
 
-    Dec( inLast );
-    Result := getStringInline( THashMap( hmTlk1ChangeValue[ inPos ][ inLast ] ).Value );
+    Dec(inLast);
+    Result := Tlk1Changes[inPos].Values[inLast];
   end;
-
-  if ( inLast = 0 )
-     and ( Result = '<EMPTY>' ) then
-     Result := '<EMPTY>';
 end;
 
 //function getValueOfString(const inPos: Integer): String;
@@ -584,8 +626,8 @@ begin
   slTlk2SoundLength.Free;
   slTlk2String.Free;
 
-  hmTlk1ChangeIndex.Free;
-  hmTlk1ChangeValue.Free;
+//  hmTlk1ChangeIndex.Free;
+//  hmTlk1ChangeValue.Free;
 
   slBookmarks.Free;
   slBookmarksNum.Free;
@@ -891,6 +933,41 @@ end;
 //    System.PWideChar( 'Строка ' + a + ', изменение ' + b + ', ' + System.Length( stRecord ).ToString + ' байт' ),
 //    MB_OK + MB_ICONINFORMATION );
 //end;
+//procedure TfrmMain.lvChangesContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
+//var
+//  liItem: TListItem;
+//  stCap: string;
+//  stID: string;
+//  stChg: string;
+//  stRec: string;
+//  inID: Integer;
+//  inChg: Integer;
+//
+//begin
+//  liItem := lvChanges.ItemFocused;
+//
+//  if not Assigned( liItem ) then
+//     Exit;
+//
+//  stCap := liItem.Caption;
+//
+//  // 1. Быстро извлекаем ID и номер изменения через getTextBetween или Pos
+//  // Предположим формат "[123] 5"
+//  stID  := System.SysUtils.Trim( getTextBetween( stCap, '[', ']' ) );
+//  stChg := System.SysUtils.Trim( Copy( stCap, Pos( ']', stCap ) + 1, MaxInt ) );
+//
+//  inID  := getIntegerInline( stID );
+//  inChg := getIntegerInline( stChg );
+//
+//  // 2. Получаем текст напрямую из HashMap
+//  stRec := getStringInline( hmTlk1ChangeValue[ inID ][ inChg ].Value );
+//
+//  Application.MessageBox(
+//    PChar( stRec ),
+//    PChar( 'Строка ' + stID + ', изменение ' + stChg + ', ' +
+//           System.SysUtils.IntToStr( Length( stRec ) ) + ' байт' ),
+//    MB_OK + MB_ICONINFORMATION );
+//end;
 procedure TfrmMain.lvChangesContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
 var
   liItem: TListItem;
@@ -910,15 +987,19 @@ begin
   stCap := liItem.Caption;
 
   // 1. Быстро извлекаем ID и номер изменения через getTextBetween или Pos
-  // Предположим формат "[123] 5"
   stID  := System.SysUtils.Trim( getTextBetween( stCap, '[', ']' ) );
   stChg := System.SysUtils.Trim( Copy( stCap, Pos( ']', stCap ) + 1, MaxInt ) );
 
   inID  := getIntegerInline( stID );
   inChg := getIntegerInline( stChg );
 
-  // 2. Получаем текст напрямую из HashMap
-  stRec := getStringInline( hmTlk1ChangeValue[ inID ][ inChg ].Value );
+  // 2. Получаем текст напрямую из нового массива структур с проверкой границ
+  stRec := '<EMPTY>';
+  if (Tlk1Changes <> nil) and (inID >= 0) and (inID < Length(Tlk1Changes)) then
+  begin
+    if (inChg >= 0) and (inChg < Length(Tlk1Changes[inID].Values)) then
+      stRec := Tlk1Changes[inID].Values[inChg];
+  end;
 
   Application.MessageBox(
     PChar( stRec ),
@@ -926,7 +1007,6 @@ begin
            System.SysUtils.IntToStr( Length( stRec ) ) + ' байт' ),
     MB_OK + MB_ICONINFORMATION );
 end;
-
 
 //procedure TfrmMain.lvChangesDblClick(Sender: TObject);
 //var
@@ -1292,6 +1372,35 @@ begin
      cbExceptInput.Checked := False;
 end;
 
+//procedure TfrmMain.AcceptStringChange(Sender: TObject);
+//var
+//  inA: Integer;
+//  inB: Integer;
+//  liChange: TListItem;
+//
+//begin
+//  if ( inLoading = 1 )
+//     or ( teTlkPath1.Text = '' ) then
+//     Exit;
+//
+//  inA := getIntegerInline( teTlkPosition.Text );
+//
+//  if tmTlk1String.Text = slTlk1String[ inA ].Replace( #10, sLineBreak ) then
+//     Exit;
+//
+//  inB := 1;
+//
+//  if not System.Variants.VarIsNull( hmTlk1ChangeIndex[ inA ].Value ) then
+//     inB := getIntegerInline( hmTlk1ChangeIndex[ inA ].Value ) +1;
+//
+//  hmTlk1ChangeIndex[ inA ].Value := inB;
+//  hmTlk1ChangeValue[ inA ][ inB ].Value := tmTlk1String.Text;
+//
+//  liChange := lvChanges.Items.Add;
+//  liChange.Caption := '[ '+inA.ToString + ' ] ' + inB.ToString;
+//
+//  sbScrollStringsChange( self );
+//end;
 procedure TfrmMain.AcceptStringChange(Sender: TObject);
 var
   inA: Integer;
@@ -1308,20 +1417,63 @@ begin
   if tmTlk1String.Text = slTlk1String[ inA ].Replace( #10, sLineBreak ) then
      Exit;
 
-  inB := 1;
+  // 1. Проверяем и динамически расширяем внешний массив, если индекс inA выходит за его текущие границы
+  if inA >= Length(Tlk1Changes) then
+     SetLength(Tlk1Changes, inA + 1);
 
-  if not System.Variants.VarIsNull( hmTlk1ChangeIndex[ inA ].Value ) then
-     inB := getIntegerInline( hmTlk1ChangeIndex[ inA ].Value ) +1;
+  // 2. Вычисляем следующий номер изменения (заменяет VarIsNull и старый Index)
+  inB := Tlk1Changes[inA].Index + 1;
 
-  hmTlk1ChangeIndex[ inA ].Value := inB;
-  hmTlk1ChangeValue[ inA ][ inB ].Value := tmTlk1String.Text;
+  // 3. Сохраняем новый индекс изменений
+  Tlk1Changes[inA].Index := inB;
+
+  // 4. Расширяем внутренний массив строк, чтобы в него поместился элемент с индексом inB
+  if inB >= Length(Tlk1Changes[inA].Values) then
+     SetLength(Tlk1Changes[inA].Values, inB + 1);
+
+  // 5. Записываем измененный текст напрямую в массив
+  Tlk1Changes[inA].Values[inB] := tmTlk1String.Text;
 
   liChange := lvChanges.Items.Add;
-  liChange.Caption := '[ '+inA.ToString + ' ] ' + inB.ToString;
+  liChange.Caption := '[ ' + inA.ToString + ' ] ' + inB.ToString;
 
   sbScrollStringsChange( self );
 end;
 
+//procedure TfrmMain.btDelChangeClick(Sender: TObject);
+//var
+//  stCaption: String;
+//  stA: String;
+//  stB: String;
+//  inA: Integer;
+//  inB: Integer;
+//
+//begin
+//  stCaption := lvChanges.ItemFocused.Caption;
+//
+//  stA := System.Copy( stCaption, 3, Length( stCaption ) );
+//  stA := System.Copy( stA, 1, Pos( ']', stA ) -2 );
+//
+//  stB := System.Copy( stCaption, Pos( ']', stCaption ) +2, Length( stCaption ) );
+//
+//  inA := getIntegerInline( stA );
+//  inB := getIntegerInline( stB );
+//
+//  if Vcl.Forms.Application.MessageBox(
+//       PChar( 'Вы хотите удалить изменение ' + stB + ' строки ' + stA + '?' + #13 +
+//                         #13 +
+//                         getStringInline( hmTlk1ChangeValue[ inA ][ inB ].Value ) ),
+//       PChar( 'ВНИМАНИЕ: Отмена изменения(ий)' ),
+//       MB_YESNO + MB_ICONQUESTION ) = IDNO then
+//    Exit;
+//
+//  hmTlk1ChangeValue[ inA ][ inB ].Value := '<EMPTY>';
+////  hmTlk1ChangeValue[ inA ].Value := -1;
+//
+//  lvChanges.ItemFocused.Delete;
+//
+//  sbScrollStringsChange( self );
+//end;
 procedure TfrmMain.btDelChangeClick(Sender: TObject);
 var
   stCaption: String;
@@ -1329,6 +1481,7 @@ var
   stB: String;
   inA: Integer;
   inB: Integer;
+  stRec: String;
 
 begin
   stCaption := lvChanges.ItemFocused.Caption;
@@ -1341,16 +1494,27 @@ begin
   inA := getIntegerInline( stA );
   inB := getIntegerInline( stB );
 
+  // Безопасно получаем текст изменения из массива для показа в MessageBox
+  stRec := '<EMPTY>';
+  if (Tlk1Changes <> nil) and (inA >= 0) and (inA < Length(Tlk1Changes)) then
+  begin
+    if (inB >= 0) and (inB < Length(Tlk1Changes[inA].Values)) then
+      stRec := Tlk1Changes[inA].Values[inB];
+  end;
+
   if Vcl.Forms.Application.MessageBox(
        PChar( 'Вы хотите удалить изменение ' + stB + ' строки ' + stA + '?' + #13 +
-                         #13 +
-                         getStringInline( hmTlk1ChangeValue[ inA ][ inB ].Value ) ),
+                         #13 + stRec ),
        PChar( 'ВНИМАНИЕ: Отмена изменения(ий)' ),
        MB_YESNO + MB_ICONQUESTION ) = IDNO then
     Exit;
 
-  hmTlk1ChangeValue[ inA ][ inB ].Value := '<EMPTY>';
-//  hmTlk1ChangeValue[ inA ].Value := -1;
+  // Присваиваем '<EMPTY>' напрямую в ячейку массива
+  if (Tlk1Changes <> nil) and (inA >= 0) and (inA < Length(Tlk1Changes)) then
+  begin
+    if (inB >= 0) and (inB < Length(Tlk1Changes[inA].Values)) then
+      Tlk1Changes[inA].Values[inB] := '<EMPTY>';
+  end;
 
   lvChanges.ItemFocused.Delete;
 
@@ -2383,12 +2547,13 @@ begin
       2 : tmTlk1String.Lines.DefaultEncoding := TEncoding.ASCII;
     end;
 
-    // Пересоздание хеш-мап изменений
-    FreeAndNil( hmTlk1ChangeIndex );
-    hmTlk1ChangeIndex := THashMap.Create;
-
-    FreeAndNil( hmTlk1ChangeValue );
-    hmTlk1ChangeValue := THashMap.Create;
+//    // Пересоздание хеш-мап изменений
+//    FreeAndNil( hmTlk1ChangeIndex );
+//    hmTlk1ChangeIndex := THashMap.Create;
+//    FreeAndNil( hmTlk1ChangeValue );
+//    hmTlk1ChangeValue := THashMap.Create;
+    // Полная очистка и освобождение памяти динамического массива изменений
+    Tlk1Changes := nil;
 
     // Копирование флагов
     FreeAndNil( slTlk1Flags );
@@ -2834,9 +2999,10 @@ var
   inCopyLen           : Integer;
 
 begin
-  // 1. Проверка изменений
-  if ( hmTlk1ChangeIndex.Count = 0 )
-     or ( hmTlk1ChangeValue.Count = 0 ) then
+  // 1. Проверка изменений (проверяем, пуст ли массив)
+//  if ( hmTlk1ChangeIndex.Count = 0 )
+//     or ( hmTlk1ChangeValue.Count = 0 ) then
+  if Length(Tlk1Changes) = 0 then
   begin
     if Vcl.Forms.Application.MessageBox(
          PChar( teTlkPath1.Text + #13#10 + 'Нет изменений в строках!' + #13#10 + 'Остановить сохранение файла?' ),
@@ -3136,8 +3302,9 @@ begin
     lvChanges.Items.BeginUpdate;
 
     lvChanges.Clear;
-    hmTlk1ChangeIndex.Clear;
-    hmTlk1ChangeValue.Clear;
+//    hmTlk1ChangeIndex.Clear;
+//    hmTlk1ChangeValue.Clear;
+    Tlk1Changes := nil;
 
     lvChanges.Items.EndUpdate;
 
@@ -3552,11 +3719,28 @@ begin
       if cbReplaceText.Checked then begin
         inB:=1;
 
-        if not System.Variants.VarIsNull( hmTlk1ChangeIndex[ i ].Value ) then
-           inB := getIntegerInline( hmTlk1ChangeIndex[ i ].Value ) +1;
+//        if not System.Variants.VarIsNull( hmTlk1ChangeIndex[ i ].Value ) then
+//           inB := getIntegerInline( hmTlk1ChangeIndex[ i ].Value ) +1;
 
-        hmTlk1ChangeIndex[ i ].Value := inB;
-        hmTlk1ChangeValue[ i ][ inB ].Value := getStringInline( slTlk1String[ i ].Replace( #10, sLineBreak) ).Replace( stPattern, teTextForReplace.Text );
+//        hmTlk1ChangeIndex[ i ].Value := inB;
+//        hmTlk1ChangeValue[ i ][ inB ].Value := getStringInline( slTlk1String[ i ].Replace( #10, sLineBreak) ).Replace( stPattern, teTextForReplace.Text );
+
+        if (i >= 0) and (i < Length(Tlk1Changes)) and (Tlk1Changes[i].Index > 0) then
+           inB := Tlk1Changes[i].Index + 1;
+
+        // 1. Проверяем и расширяем внешний массив, если индекс i выходит за его границы
+        if i >= Length(Tlk1Changes) then
+          SetLength(Tlk1Changes, i + 1);
+
+        // 2. Записываем новый индекс изменений
+        Tlk1Changes[i].Index := inB;
+
+        // 3. Расширяем внутренний массив строк, чтобы в него поместился элемент с индексом inB
+        if inB >= Length(Tlk1Changes[i].Values) then
+          SetLength(Tlk1Changes[i].Values, inB + 1);
+
+        // 4. Записываем измененный текст напрямую в массив
+        Tlk1Changes[i].Values[inB] := slTlk1String[i].Replace(#10, sLineBreak).Replace(stPattern, teTextForReplace.Text);
 
         liChange := lvChanges.Items.Add;
         liChange.Caption := '[ '+i.ToString + ' ] ' + inB.ToString;
